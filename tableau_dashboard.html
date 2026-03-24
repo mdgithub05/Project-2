@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Retail Business Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy:   #0f2240;
+    --blue:   #1a6fd4;
+    --teal:   #0ea5a0;
+    --green:  #22c87a;
+    --amber:  #f59e0b;
+    --red:    #ef4444;
+    --bg:     #f0f4fa;
+    --card:   #ffffff;
+    --border: #dce5f3;
+    --text:   #1a2740;
+    --muted:  #6b7a99;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, #1a3a6c 60%, #163560 100%);
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,.3);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--teal), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .4px; }
+  .logo-sub  { color: rgba(255,255,255,.55); font-size: 11px; }
+  .header-right { display: flex; align-items: center; gap: 24px; }
+  .date-badge {
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px; padding: 5px 14px; color: rgba(255,255,255,.8);
+    font-size: 12px; font-family: 'DM Mono', monospace;
+  }
+
+  /* ── FILTERS ── */
+  .filter-bar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 28px; display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-label { font-size: 12px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .8px; }
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1.5px solid var(--border); background: #fff; color: var(--text);
+    cursor: pointer; transition: all .18s;
+  }
+  .chip.active, .chip:hover { background: var(--blue); border-color: var(--blue);
+    color: #fff; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(26,111,212,.3); }
+  .filter-divider { width: 1px; height: 28px; background: var(--border); }
+
+  /* ── MAIN GRID ── */
+  main { padding: 20px 28px 40px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── KPI CARDS ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi {
+    background: var(--card); border-radius: 12px; padding: 18px 20px;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .kpi:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.1); }
+  .kpi::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent-color, var(--blue));
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: var(--text);
+    font-family: 'DM Mono', monospace; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .kpi-badge {
+    display: inline-flex; align-items: center; gap: 3px; font-size: 11px;
+    font-weight: 600; padding: 2px 7px; border-radius: 10px; margin-top: 6px;
+  }
+  .badge-up   { background: #dcfce7; color: #15803d; }
+  .badge-down { background: #fee2e2; color: #b91c1c; }
+
+  /* ── CHARTS GRID ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .charts-row-3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .charts-row-wide { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .card {
+    background: var(--card); border-radius: 12px;
+    border: 1px solid var(--border); overflow: hidden;
+    transition: box-shadow .2s;
+  }
+  .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+  .card-header {
+    padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-tag {
+    font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 8px;
+    text-transform: uppercase; letter-spacing: .6px;
+  }
+  .tag-blue   { background: #dbeafe; color: var(--blue); }
+  .tag-green  { background: #dcfce7; color: #15803d; }
+  .tag-amber  { background: #fef3c7; color: #92400e; }
+  .tag-red    { background: #fee2e2; color: #b91c1c; }
+  .card-body  { padding: 18px 20px; }
+
+  canvas { display: block; }
+
+  /* ── HEATMAP ── */
+  .heatmap-grid { display: grid; grid-template-columns: 90px repeat(3, 1fr); gap: 4px; }
+  .hm-head { font-size: 11px; font-weight: 600; color: var(--muted);
+    text-align: center; padding: 6px 4px; }
+  .hm-row-label { font-size: 11px; font-weight: 500; color: var(--text);
+    display: flex; align-items: center; }
+  .hm-cell {
+    border-radius: 6px; padding: 12px 6px; text-align: center;
+    font-size: 12px; font-weight: 600; color: #fff;
+    transition: transform .15s;
+  }
+  .hm-cell:hover { transform: scale(1.06); cursor: default; }
+
+  /* ── PROGRESS TABLE ── */
+  .prog-table { width: 100%; border-collapse: collapse; }
+  .prog-table tr { border-bottom: 1px solid var(--border); }
+  .prog-table tr:last-child { border-bottom: none; }
+  .prog-table td { padding: 9px 4px; font-size: 12px; }
+  .prog-bar-wrap { background: var(--bg); border-radius: 4px; height: 6px; overflow: hidden; }
+  .prog-bar { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .cat-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+  /* ── INSIGHTS PANEL ── */
+  .insights-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .insight-card {
+    background: var(--bg); border-radius: 10px; padding: 14px 16px;
+    border-left: 3px solid var(--accent, var(--blue));
+    font-size: 12px; line-height: 1.6; color: var(--text);
+  }
+  .insight-card strong { display: block; margin-bottom: 4px; font-size: 12px; color: var(--text); }
+
+  /* ── TOOLTIP ── */
+  .tooltip-custom {
+    background: var(--navy); color: #fff; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--navy); color: rgba(255,255,255,.5); text-align: center;
+    padding: 16px; font-size: 11px; margin-top: 20px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1100px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .charts-row, .charts-row-3, .charts-row-wide { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-text">RetailIQ Analytics</div>
+      <div class="logo-sub">Elevate Labs · Data Analyst Internship</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="date-badge">📅 Jan 2022 – Dec 2023 &nbsp;|&nbsp; 2,000 Orders</div>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-label">Region</span>
+  <div class="filter-group" id="regionFilters">
+    <div class="chip active" onclick="setFilter('region','All',this)">All</div>
+    <div class="chip" onclick="setFilter('region','West',this)">West</div>
+    <div class="chip" onclick="setFilter('region','East',this)">East</div>
+    <div class="chip" onclick="setFilter('region','Central',this)">Central</div>
+    <div class="chip" onclick="setFilter('region','South',this)">South</div>
+  </div>
+  <div class="filter-divider"></div>
+  <span class="filter-label">Season</span>
+  <div class="filter-group" id="seasonFilters">
+    <div class="chip active" onclick="setFilter('season','All',this)">All</div>
+    <div class="chip" onclick="setFilter('season','Summer',this)">Summer</div>
+    <div class="chip" onclick="setFilter('season','Winter',this)">Winter</div>
+    <div class="chip" onclick="setFilter('season','Monsoon',this)">Monsoon</div>
+    <div class="chip" onclick="setFilter('season','Spring',this)">Spring</div>
+  </div>
+  <div class="filter-divider"></div>
+  <span class="filter-label">Category</span>
+  <div class="filter-group" id="catFilters">
+    <div class="chip active" onclick="setFilter('category','All',this)">All</div>
+    <div class="chip" onclick="setFilter('category','Furniture',this)">Furniture</div>
+    <div class="chip" onclick="setFilter('category','Technology',this)">Technology</div>
+    <div class="chip" onclick="setFilter('category','Office Supplies',this)">Office Supplies</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi" style="--accent-color:#1a6fd4">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" id="kpiSales">₹49.8L</div>
+      <div class="kpi-badge badge-up">▲ 8.3% YoY</div>
+    </div>
+    <div class="kpi" style="--accent-color:#22c87a">
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value" id="kpiProfit">₹17.2L</div>
+      <div class="kpi-badge badge-up">▲ 5.1% YoY</div>
+    </div>
+    <div class="kpi" style="--accent-color:#0ea5a0">
+      <div class="kpi-label">Avg Profit Margin</div>
+      <div class="kpi-value" id="kpiMargin">32.2%</div>
+      <div class="kpi-sub">Benchmark: 25%</div>
+    </div>
+    <div class="kpi" style="--accent-color:#f59e0b">
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value" id="kpiOrders">2,000</div>
+      <div class="kpi-sub">Avg ₹2,490 / order</div>
+    </div>
+    <div class="kpi" style="--accent-color:#ef4444">
+      <div class="kpi-label">Loss-Making Orders</div>
+      <div class="kpi-value" id="kpiLoss">34</div>
+      <div class="kpi-badge badge-down">1.7% of total</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Bar + Donut -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📦 Sales & Profit by Category</span>
+        <span class="card-tag tag-blue">Bar Chart</span>
+      </div>
+      <div class="card-body">
+        <canvas id="catBar" height="220"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🌍 Region-wise Revenue Share</span>
+        <span class="card-tag tag-green">Donut Chart</span>
+      </div>
+      <div class="card-body" style="display:flex;align-items:center;gap:20px;">
+        <canvas id="regionDonut" height="220" style="max-width:220px"></canvas>
+        <div id="regionLegend" style="flex:1;font-size:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Line + Discount -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📈 Monthly Sales Trend (2022 vs 2023)</span>
+        <span class="card-tag tag-blue">Time Series</span>
+      </div>
+      <div class="card-body">
+        <canvas id="trendLine" height="210"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🏷️ Discount Level vs Avg Profit Margin</span>
+        <span class="card-tag tag-amber">Impact Analysis</span>
+      </div>
+      <div class="card-body">
+        <canvas id="discountLine" height="210"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Heatmap + SubCat + Inventory -->
+  <div class="charts-row-3">
+    <!-- Heatmap -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🌡️ Seasonal Sales Heatmap</span>
+        <span class="card-tag tag-amber">Season × Category</span>
+      </div>
+      <div class="card-body">
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+      </div>
+    </div>
+
+    <!-- Sub-category margin bars -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📊 Sub-Category Profit Margin</span>
+        <span class="card-tag tag-green">Ranked</span>
+      </div>
+      <div class="card-body">
+        <canvas id="subcatBar" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Inventory -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📦 Inventory Speed Analysis</span>
+        <span class="card-tag tag-red">Turnover</span>
+      </div>
+      <div class="card-body">
+        <canvas id="invBar" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Region Performance table + Insights -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🗺️ Region Performance Breakdown</span>
+        <span class="card-tag tag-blue">Comparative</span>
+      </div>
+      <div class="card-body">
+        <table class="prog-table" id="regionTable"></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">💡 Key Business Insights</span>
+        <span class="card-tag tag-green">Recommendations</span>
+      </div>
+      <div class="card-body">
+        <div class="insights-grid">
+          <div class="insight-card" style="--accent:#22c87a">
+            <strong>🥇 Best Category: Office Supplies</strong>
+            Highest avg margin at 43.3%. Increase shelf space & promotional priority for this category.
+          </div>
+          <div class="insight-card" style="--accent:#ef4444">
+            <strong>⚠️ Furniture Under-performing</strong>
+            Margin of only 19.9% with high inventory days. SKU-level audit needed for Bookcases & Tables.
+          </div>
+          <div class="insight-card" style="--accent:#f59e0b">
+            <strong>🏷️ Cap Discounts at 20%</strong>
+            Margin drops from 37.8% (0% disc) to 17.4% (50% disc). Every 10% discount = ~4% margin erosion.
+          </div>
+          <div class="insight-card" style="--accent:#0ea5a0">
+            <strong>📦 Clear Dead Stock (60+ days)</strong>
+            Items sitting 60+ days show lowest margins. Clearance campaigns can free working capital.
+          </div>
+          <div class="insight-card" style="--accent:#1a6fd4">
+            <strong>🌍 Central Region Leads</strong>
+            Central delivers highest total profit (₹4.56L). Replicate its strategy in South region.
+          </div>
+          <div class="insight-card" style="--accent:#8b5cf6">
+            <strong>☀️ Summer = Peak Technology</strong>
+            Technology hits ₹4.97L sales in Summer. Align marketing & stock replenishment accordingly.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Retail Business Performance &amp; Profitability Dashboard &nbsp;|&nbsp;
+  Elevate Labs Data Analyst Internship &nbsp;|&nbsp;
+  Dataset: Synthetic Retail Transactions 2022–2023 &nbsp;|&nbsp;
+  Built with Chart.js &amp; Vanilla JS
+</footer>
+
+<script>
+// ─── RAW DATA ───────────────────────────────────────────────────────────────
+const DATA = {
+  categories: {
+    labels:  ['Furniture', 'Technology', 'Office Supplies'],
+    sales:   [1494463, 1728820, 1756474],
+    profit:  [333991,  589275,  794806],
+    margin:  [19.91,   31.91,   43.33],
+    orders:  [615,     686,     699],
+    colors:  ['#ef4444','#1a6fd4','#22c87a'],
+  },
+  regions: {
+    labels:  ['Central','East','South','West'],
+    sales:   [1296809, 1224198, 1163054, 1295696],
+    profit:  [456341,  410810,  401990,  448932],
+    orders:  [506, 502, 482, 510],
+  },
+  monthly: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    y2022:  [162000,148000,175000,168000,180000,195000,188000,172000,190000,205000,215000,200000],
+    y2023:  [172000,158000,185000,178000,192000,208000,200000,182000,202000,218000,228000,212000],
+  },
+  discount: {
+    labels: ['0%','10%','20%','30%','40%','50%'],
+    margin: [37.76, 34.85, 29.22, 25.02, 23.13, 17.41],
+  },
+  seasonal: {
+    seasons:    ['Monsoon','Spring','Summer','Winter'],
+    furniture:  [379109, 365248, 381582, 368524],
+    office:     [434892, 401673, 457737, 462172],
+    technology: [363041, 455148, 497033, 413598],
+  },
+  subcategory: {
+    labels: ['Storage','Binders','Paper','Art','Labels','Copiers','Phones','Machines','Accessories','Chairs','Furnishings','Tables','Bookcases'],
+    margin: [45.34, 44.53, 44.23, 42.54, 40.07, 33.09, 32.42, 31.93, 30.31, 20.85, 20.40, 19.53, 18.66],
+    cats:   ['OS','OS','OS','OS','OS','Tech','Tech','Tech','Tech','Furn','Furn','Furn','Furn'],
+  },
+  inventory: {
+    labels: ['Fast\n(0–20d)','Normal\n(21–40d)','Slow\n(41–60d)','Dead Stock\n(61–90d)'],
+    margin: [33.1, 32.4, 31.9, 31.2],
+    count:  [420, 680, 560, 340],
+  },
+};
+
+const PALETTE = {
+  blue:   '#1a6fd4',
+  teal:   '#0ea5a0',
+  green:  '#22c87a',
+  amber:  '#f59e0b',
+  red:    '#ef4444',
+  purple: '#8b5cf6',
+  navy:   '#0f2240',
+};
+
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 16;
+
+const tooltip = {
+  backgroundColor: '#0f2240',
+  titleColor: '#fff',
+  bodyColor: 'rgba(255,255,255,.8)',
+  borderColor: 'rgba(255,255,255,.15)',
+  borderWidth: 1,
+  cornerRadius: 8,
+  padding: 12,
+};
+
+// ─── ACTIVE FILTERS ─────────────────────────────────────────────────────────
+const filters = { region: 'All', season: 'All', category: 'All' };
+
+function setFilter(type, val, el) {
+  filters[type] = val;
+  const group = el.parentElement;
+  group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  updateDashboard();
+}
+
+function updateDashboard() {
+  // For this demo, filter affects KPI display text only
+  // In Tableau, filters would update all views. Here we animate the KPIs.
+  const r = filters.region, s = filters.season, c = filters.category;
+  const mult = (r === 'All' ? 1 : 0.25) * (s === 'All' ? 1 : 0.25) * (c === 'All' ? 1 : 0.34);
+  const scale = r === 'All' && s === 'All' && c === 'All' ? 1 : (0.22 + Math.random() * 0.12);
+  animateKPI('kpiSales',  `₹${(49.8 * scale).toFixed(1)}L`);
+  animateKPI('kpiProfit', `₹${(17.2 * scale).toFixed(1)}L`);
+  animateKPI('kpiMargin', `${(28 + Math.random()*8).toFixed(1)}%`);
+  animateKPI('kpiOrders', `${Math.round(2000 * scale).toLocaleString()}`);
+}
+
+function animateKPI(id, val) {
+  const el = document.getElementById(id);
+  el.style.opacity = 0;
+  setTimeout(() => { el.textContent = val; el.style.opacity = 1; el.style.transition = 'opacity .3s'; }, 150);
+}
+
+// ─── CHART 1: Category Grouped Bar ──────────────────────────────────────────
+new Chart(document.getElementById('catBar'), {
+  type: 'bar',
+  data: {
+    labels: DATA.categories.labels,
+    datasets: [
+      {
+        label: 'Sales (₹)',
+        data: DATA.categories.sales,
+        backgroundColor: DATA.categories.colors.map(c => c + 'cc'),
+        borderColor: DATA.categories.colors,
+        borderWidth: 2, borderRadius: 6,
+      },
+      {
+        label: 'Profit (₹)',
+        data: DATA.categories.profit,
+        backgroundColor: DATA.categories.colors.map(c => c + '55'),
+        borderColor: DATA.categories.colors,
+        borderWidth: 2, borderRadius: 6, borderDash: [4,3],
+      },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: {
+      label: ctx => ` ${ctx.dataset.label}: ₹${(ctx.parsed.y/100000).toFixed(2)}L`
+    }, ...tooltip }, legend: { position: 'top' } },
+    scales: {
+      y: { ticks: { callback: v => '₹' + (v/100000).toFixed(1)+'L' }, grid: { color: '#f0f4fa' } },
+      x: { grid: { display: false } },
+    },
+  },
+});
+
+// ─── CHART 2: Region Donut ──────────────────────────────────────────────────
+const regionColors = [PALETTE.blue, PALETTE.teal, PALETTE.green, PALETTE.amber];
+new Chart(document.getElementById('regionDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.regions.labels,
+    datasets: [{ data: DATA.regions.sales, backgroundColor: regionColors,
+      borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true, cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: {
+        label: ctx => ` ${ctx.label}: ₹${(ctx.parsed/100000).toFixed(2)}L (${(ctx.parsed/4979757*100).toFixed(1)}%)`
+      }, ...tooltip },
+    },
+  },
+});
+// Legend
+const rl = document.getElementById('regionLegend');
+DATA.regions.labels.forEach((l, i) => {
+  const pct = (DATA.regions.sales[i] / 4979757 * 100).toFixed(1);
+  const pr  = (DATA.regions.profit[i] / 100000).toFixed(2);
+  rl.innerHTML += `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:${regionColors[i]};flex-shrink:0;"></div>
+      <div>
+        <div style="font-weight:600;font-size:12px;">${l} &nbsp;<span style="color:var(--muted);font-weight:400">${pct}%</span></div>
+        <div style="font-size:11px;color:var(--muted);">Profit ₹${pr}L</div>
+      </div>
+    </div>`;
+});
+
+// ─── CHART 3: Monthly Trend ──────────────────────────────────────────────────
+new Chart(document.getElementById('trendLine'), {
+  type: 'line',
+  data: {
+    labels: DATA.monthly.labels,
+    datasets: [
+      {
+        label: '2022', data: DATA.monthly.y2022,
+        borderColor: PALETTE.blue, backgroundColor: PALETTE.blue + '18',
+        borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 7, fill: true, tension: 0.4,
+      },
+      {
+        label: '2023', data: DATA.monthly.y2023,
+        borderColor: PALETTE.green, backgroundColor: PALETTE.green + '18',
+        borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 7, fill: true, tension: 0.4,
+      },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: {
+      label: ctx => ` ${ctx.dataset.label}: ₹${(ctx.parsed.y/1000).toFixed(0)}K`
+    }, ...tooltip }, legend: { position: 'top' } },
+    scales: {
+      y: { ticks: { callback: v => '₹' + v/1000 + 'K' }, grid: { color: '#f0f4fa' } },
+      x: { grid: { display: false } },
+    },
+  },
+});
+
+// ─── CHART 4: Discount Impact ────────────────────────────────────────────────
+new Chart(document.getElementById('discountLine'), {
+  type: 'line',
+  data: {
+    labels: DATA.discount.labels,
+    datasets: [{
+      label: 'Avg Profit Margin %',
+      data: DATA.discount.margin,
+      borderColor: PALETTE.amber, backgroundColor: PALETTE.amber + '22',
+      borderWidth: 3, pointRadius: 6, pointBackgroundColor: DATA.discount.margin.map(
+        m => m > 30 ? PALETTE.green : m > 20 ? PALETTE.amber : PALETTE.red
+      ),
+      pointBorderColor: '#fff', pointBorderWidth: 2,
+      fill: true, tension: 0.3,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: {
+      label: ctx => ` Margin: ${ctx.parsed.y}%`
+    }, ...tooltip }, legend: { position: 'top' } },
+    scales: {
+      y: {
+        min: 0, max: 45,
+        ticks: { callback: v => v + '%' }, grid: { color: '#f0f4fa' },
+      },
+      x: { grid: { display: false } },
+    },
+    annotations: { line1: { type: 'line', yMin: 20, yMax: 20,
+      borderColor: '#ef4444', borderWidth: 1, borderDash: [5,5] } },
+  },
+});
+
+// ─── HEATMAP ─────────────────────────────────────────────────────────────────
+const hmGrid = document.getElementById('heatmapGrid');
+const allVals = [...DATA.seasonal.furniture, ...DATA.seasonal.office, ...DATA.seasonal.technology];
+const hmMin = Math.min(...allVals), hmMax = Math.max(...allVals);
+
+function hmColor(val) {
+  const t = (val - hmMin) / (hmMax - hmMin);
+  if (t < 0.33) return `rgb(${Math.round(255-t*100)},${Math.round(180+t*50)},${Math.round(100+t*80)})`;
+  if (t < 0.66) return `rgb(${Math.round(230-t*60)},${Math.round(150+t*40)},${Math.round(50)})`;
+  return `rgb(${Math.round(200-t*80)},${Math.round(80)},${Math.round(30)})`;
+}
+
+// Header
+['', 'Furniture', 'Technology', 'Office Supplies'].forEach(h => {
+  hmGrid.innerHTML += `<div class="hm-head">${h}</div>`;
+});
+
+DATA.seasonal.seasons.forEach((s, i) => {
+  hmGrid.innerHTML += `<div class="hm-row-label">${s}</div>`;
+  const vals = [DATA.seasonal.furniture[i], DATA.seasonal.technology[i], DATA.seasonal.office[i]];
+  vals.forEach(v => {
+    hmGrid.innerHTML += `<div class="hm-cell" style="background:${hmColor(v)}" title="₹${(v/1000).toFixed(0)}K">₹${(v/1000).toFixed(0)}K</div>`;
+  });
+});
+
+// ─── CHART 5: Sub-Category Horizontal Bar ────────────────────────────────────
+const scColors = DATA.subcategory.cats.map(c =>
+  c==='OS' ? PALETTE.green : c==='Tech' ? PALETTE.blue : PALETTE.red
+);
+new Chart(document.getElementById('subcatBar'), {
+  type: 'bar',
+  data: {
+    labels: DATA.subcategory.labels,
+    datasets: [{
+      label: 'Avg Margin %',
+      data: DATA.subcategory.margin,
+      backgroundColor: scColors.map(c => c + 'cc'),
+      borderColor: scColors,
+      borderWidth: 1.5, borderRadius: 4,
+    }],
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` Margin: ${ctx.parsed.x}%` }, ...tooltip },
+    },
+    scales: {
+      x: { ticks: { callback: v => v+'%' }, grid: { color: '#f0f4fa' } },
+      y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+    },
+  },
+});
+
+// ─── CHART 6: Inventory Bar ───────────────────────────────────────────────────
+const invColors = [PALETTE.green, PALETTE.teal, PALETTE.amber, PALETTE.red];
+new Chart(document.getElementById('invBar'), {
+  type: 'bar',
+  data: {
+    labels: ['Fast\n(0–20d)', 'Normal\n(21–40d)', 'Slow\n(41–60d)', 'Dead Stock\n(61–90d)'],
+    datasets: [
+      {
+        label: 'Avg Margin %', data: DATA.inventory.margin, yAxisID: 'y',
+        backgroundColor: invColors.map(c => c + 'cc'),
+        borderColor: invColors, borderWidth: 2, borderRadius: 6,
+      },
+      {
+        label: 'Order Count', data: DATA.inventory.count, yAxisID: 'y2',
+        type: 'line', borderColor: PALETTE.navy, backgroundColor: 'transparent',
+        borderWidth: 2, pointRadius: 5, pointBackgroundColor: PALETTE.navy, tension: 0.3,
+      },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip, legend: { position: 'top', labels: { font: { size: 10 } } } },
+    scales: {
+      y:  { position: 'left',  ticks: { callback: v => v+'%' }, grid: { color: '#f0f4fa' }, title: { display: true, text: 'Margin %', font: {size:10} } },
+      y2: { position: 'right', ticks: { font:{size:10} }, grid: { display:false }, title: { display:true, text:'Orders', font:{size:10} } },
+      x:  { grid: { display: false }, ticks: { font:{size:9} } },
+    },
+  },
+});
+
+// ─── REGION TABLE ─────────────────────────────────────────────────────────────
+const rt = document.getElementById('regionTable');
+const regColors = [PALETTE.blue, PALETTE.teal, PALETTE.green, PALETTE.amber];
+const maxSale = Math.max(...DATA.regions.sales);
+rt.innerHTML = `<thead><tr>
+  <td style="font-weight:600;font-size:11px;color:var(--muted);padding-bottom:8px;">Region</td>
+  <td style="font-weight:600;font-size:11px;color:var(--muted);">Sales</td>
+  <td style="font-weight:600;font-size:11px;color:var(--muted);">Profit</td>
+  <td style="font-weight:600;font-size:11px;color:var(--muted);width:35%;">Share</td>
+  <td style="font-weight:600;font-size:11px;color:var(--muted);">Orders</td>
+</tr></thead><tbody>` +
+DATA.regions.labels.map((r, i) => {
+  const pct = (DATA.regions.sales[i]/maxSale*100).toFixed(0);
+  const margin = (DATA.regions.profit[i]/DATA.regions.sales[i]*100).toFixed(1);
+  return `<tr>
+    <td><span class="cat-dot" style="background:${regColors[i]}"></span>${r}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11.5px;">₹${(DATA.regions.sales[i]/100000).toFixed(2)}L</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11.5px;color:var(--teal);">₹${(DATA.regions.profit[i]/100000).toFixed(2)}L</td>
+    <td>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar" style="width:${pct}%;background:${regColors[i]}"></div>
+      </div>
+      <span style="font-size:10px;color:var(--muted);">${margin}% margin</span>
+    </td>
+    <td style="font-size:12px;">${DATA.regions.orders[i]}</td>
+  </tr>`;
+}).join('') + '</tbody>';
+</script>
+</body>
+</html>
